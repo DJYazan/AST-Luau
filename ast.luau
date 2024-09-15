@@ -206,7 +206,7 @@ function AST_Module.new()
 				for i, v in pairs(v.args) do
 					local targetAST = findVariable(v)
 					if v then
-						if v.type == "VariableAssignment" then
+						if v.type ~= "CallAssignment" then
 							table.insert(args, v.r)
 						else
 							table.insert(args, v.l)
