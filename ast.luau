@@ -119,7 +119,7 @@ function AST_Module.new()
 	end
 	function AST:Optimize()
 		local AST = AST:prepare()
-		local astb = {}
+		--local astb = {}
 		for _, v in pairs(AST) do
 			v.used = false
 			v.ignore = false
@@ -127,10 +127,10 @@ function AST_Module.new()
 
 		for i, v in pairs(AST) do
 			if v.type == "VariableAssignment" then
-				astb[v.l] = v
-				astb[v.l].index = i
+				--astb[v.l] = v
+				--astb[v.l].index = i
 			elseif v.type == "CallAssignment" then
-				assert(astb[v.r], "Node does not exist.")
+				--assert(astb[v.r], "Node does not exist.")
 				local args = {}
 				for _, arg in pairs(v.args) do
 					local targetAST = findVariable(arg)
@@ -149,12 +149,18 @@ function AST_Module.new()
 					end
 				end
 				v.args = args
-				if astb[v.r].isLuauGlobal then
+				local targetAST = findVariable(v.r)
+				--[[if astb[v.r].isLuauGlobal then
 					v.r = astb[v.r].r
+				end--]]
+				if targetAST then
+					if targetAST.isLuauGlobal == true then
+						v.r = targetAST.r
+					end
 				end
 				v.used = true
 			elseif v.type == "NamecallAssignment" then
-				assert(astb[v.r], "Node does not exist.")
+				--assert(astb[v.r], "Node does not exist.")
 				local args = {}
 				for _, arg in pairs(v.args) do
 					local targetAST = findVariable(arg)
@@ -165,13 +171,19 @@ function AST_Module.new()
 					end
 				end
 				v.args = args
-				if astb[v.r].isLuauGlobal then
+				local targetAST = findVariable(v.r)
+				--[[if astb[v.r].isLuauGlobal then
 					v.r = astb[v.r].r
+				end--]]
+				if targetAST then
+					if targetAST.isLuauGlobal == true then
+						v.r = targetAST.r
+					end
 				end
 				v.r = string.format("%s:%s(%s)", v.r, v.NamecallK, table.concat(args, ", "))
 				v.used = true
 			elseif v.type == "TableAssignment" then
-				assert(astb[v.l], "Table Node does not exist.")
+				--assert(astb[v.l], "Table Node does not exist.")
 				assert(v.assignType, "assignType is not defined.")
 				findVariable(v.l).used = true
 				if v.assignType == "variable" then
@@ -317,5 +329,16 @@ function AST_Module.new()
 
 	return AST
 end
+
+-- Usage example
+--[[
+local AST = AST_Module.new()
+AST:AddVariable("v1", "game", true)
+AST:AddVariable("v2", "ReplicatedStorage", false)
+AST:AddNamecall("v1", "v1", "WaitForChild", {"v2"})
+AST:Optimize()
+print(AST:ToLua())
+]]
+
 
 return AST_Module
