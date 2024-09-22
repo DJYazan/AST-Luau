@@ -109,7 +109,7 @@ function AST_m.new()
 			elseif v.type == 'NamecallAssignment' then
 				print(trackVarAST(v.tocall))
 				if trackVarAST(v.tocall) then
-					v.tocall = trackVarAST(v.tocall).Value
+					v.tocall = trackVarAST(v.tocall).Value or v.tocall
 				end
 				local args = {}
 				local function getrealtimearg(arg)
