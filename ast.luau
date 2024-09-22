@@ -61,7 +61,9 @@ function AST_m.new()
 	function AST.optimize()
 		local prepped = AST.prepare()
 		for i, v in pairs(prepped) do
-			v.used = false
+			if v.type == 'VariableAssignment' then
+				v.used = false
+			end
 			if v.type == 'CallAssignment' then
 				v.ref = false
 			end
