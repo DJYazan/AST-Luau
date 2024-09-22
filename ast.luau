@@ -1,6 +1,6 @@
 --TODO: Maybe add support for multiple variable declerations ('local a, b, c = foo()')
 --this is prtty shit rn, will update it
---To remove useless variables completely, uncomment L139
+--To remove useless variables completely, uncomment L97
 
 local table_insert = table.insert
 local table_concat = table.concat
@@ -80,15 +80,21 @@ function AST_m.new()
 			if v.type == 'VariableAssignment' then
 				v.used = false
 			end
-			if v.type == 'CallAssignment' then
+			if v.type == 'CallAssignment' or v.type == 'NamecallAssignment' then
 				v.ref = false
 			end
 		end
 		for i, v in pairs(prepped) do
 			if v.type == 'CallAssignment' then
 				print(trackVarAST(v.tocall))
-				if trackVarAST(v.tocall) then
+				if trackVarAST(v.tocall) ~= nil then
 					v.tocall = trackVarAST(v.tocall).Value or v.tocall
+					if trackVarAST(v.tocall) ~= nil then
+						if trackVarAST(v.tocall).type == 'NamecallAssignment' or trackVarAST(v.tocall).type == 'CallAssignment' then
+							trackVarAST(v.tocall).ref = true
+							--print('BREH CALL' .. tostring(trackVarAST(v.tocall)))
+						end
+					end
 				end
 				local args = {}
 				local function getrealtimearg(arg)
@@ -110,8 +116,14 @@ function AST_m.new()
 				v.args = args
 			elseif v.type == 'NamecallAssignment' then
 				print(trackVarAST(v.tocall))
-				if trackVarAST(v.tocall) then
+				if trackVarAST(v.tocall) ~= nil then
 					v.tocall = trackVarAST(v.tocall).Value or v.tocall
+					if trackVarAST(v.tocall) ~= nil then
+						if trackVarAST(v.tocall).type == 'NamecallAssignment' or trackVarAST(v.tocall).type == 'CallAssignment' then
+							trackVarAST(v.tocall).ref = true
+							--print('BREH NAMECALL' .. tostring(trackVarAST(v.tocall)))
+						end
+					end
 				end
 				local args = {}
 				local function getrealtimearg(arg)
@@ -181,7 +193,8 @@ function AST_m.new()
 	return AST
 end
 
---[[local AST = AST_m.new()
+--[[
+local AST = AST_m.new()
 AST.AddVariableDecleration('v1', 'print', false)
 AST.AddVariableDecleration('u1', '"raw.gith"', false)
 AST.AddNamecallDecleration('v5', 'game', 'HttpGet', {'u1'})
@@ -190,4 +203,5 @@ AST.AddCallDecleration('v3', 'v1', {'v2'})
 AST.AddCallDecleration('v18', 'v5', {})
 print(AST)
 AST.optimize()
-print(AST.toLua())--]]
+print(AST.toLua())
+]]
