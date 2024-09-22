@@ -1,5 +1,6 @@
 --TODO: Maybe add support for multiple variable declerations ('local a, b, c = foo()')
 --this is prtty shit rn, will update it
+--To remove useless variables completely, uncomment L97
 
 local table_insert = table.insert
 local table_concat = table.concat
