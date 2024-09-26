@@ -3,10 +3,6 @@
 --this is prtty shit rn, will update it
 --To remove useless variables completely, uncomment L97
 
---TODO: Maybe add support for multiple variable declerations ('local a, b, c = foo()')
---this is prtty shit rn, will update it
---To remove useless variables completely, uncomment L97
-
 local table_insert = table.insert
 local table_concat = table.concat
 local AST_m = {}
@@ -355,17 +351,4 @@ function AST_m.new(opt)
 	return AST
 end
 
---[[
-local AST = AST_m.new()
-AST.AddVariableDecleration('v1', 'print', false)
-AST.AddVariableDecleration('u1', '"raw.gith"', false)
-AST.AddNamecallDecleration('v5', 'game', 'HttpGet', {'u1'})
-AST.AddVariableDecleration('v2', '"Hello World!"', false)
-AST.AddCallDecleration('v3', 'v1', {'v2'})
-AST.AddCallDecleration('v18', 'v5', {})
-AST.AddVariableDecleration('v1', 'getgenv', false)
-AST.AddCallDecleration('v3', 'v1', {'v2'})
-print(AST)
-AST.optimize()
-print(AST.toLua())
---]]
+return AST_m
