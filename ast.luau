@@ -2,6 +2,7 @@
 --TODO: Improve this code, its pretty chaotic
 --this is prtty shit rn, will update it
 --To remove useless variables completely, uncomment L97
+--i'm adding a parser after this
 
 local table_insert = table.insert
 local table_concat = table.concat
