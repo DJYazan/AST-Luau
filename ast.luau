@@ -4,6 +4,19 @@
 --To remove useless variables completely, uncomment L97
 --i'm adding a parser after this
 
+local Trademark = {
+	'Assembled using ast pro max i have a vison for that one',
+	'pew',
+	'CODE IS RANDOM! This is very inaccurate and this was generated using GPT.',
+	'i stole this from advanced decompiler v3 btw (shhh dont tell him)',
+	'/*_*/',
+	'Decompiled with SynapseX',
+	'tip of the day: use the math library!',
+	'Decompiled with Medal Decompiler',
+	'Decompiled with the Oracle Decompiler.',
+	'This has a lot of bugs, you have to fixe them'
+}
+
 local table_insert = table.insert
 local table_concat = table.concat
 local AST_m = {}
@@ -123,6 +136,44 @@ function AST_m.new(opt)
 			})
 		end
 		
+	end
+	function AST.AddForIndexLoop(Index, IndexValue, IndexIn, IndexOut) -- for Index = IndexValue, IndexIn, IndexOut do
+		table_insert(AST, {
+			type = 'ForIndexLoop',
+			IndexVariable = Index,
+			IndexValue = IndexValue,
+			IndexIn = IndexIn,
+			IndexOut = IndexOut
+		})
+		--[[AST[endl] = {
+			type = 'EndLine'
+		} -- this is really bad]]
+	end
+	function AST.EndLine()
+		table_insert(AST, {
+			type = 'EndLine'
+		})
+	end
+	function AST.CreateTable(Variable)
+		if trackVarAST(Variable) then
+			table_insert(AST, {
+				type = 'MoveTableAssignment',
+				Variable = Variable
+			})
+		else
+			table_insert(AST, {
+				type = 'TableAssignment',
+				Variable = Variable
+			})
+		end
+	end
+	function AST.SetTableIndex(TableVariable, TableIndex, TableValue)
+		table_insert(AST, {
+			type = 'TableIndexAssignment',
+			Table = TableVariable,
+			Index = TableIndex,
+			Value = TableValue
+		})
 	end
 	AST.trackVarAST = trackVarAST
 	function AST.optimize()
@@ -245,7 +296,8 @@ function AST_m.new(opt)
 				v.args = args
 			elseif v.type == 'MoveCallAssignment' then
 				print(trackVarAST(v.tocall))
-				trackVarAST(v.Variable).Value = v.Value
+				local backval = trackVarAST(v.tocall).Value
+				trackVarAST(v.tocall).Value = v.Value or backval or '--[[{Failed to obtain Variable Tack}]]'
 				if trackVarAST(v.tocall) ~= nil then
 					v.tocall = trackVarAST(v.tocall).Value or v.tocall
 					if trackVarAST(v.tocall) ~= nil then
@@ -280,6 +332,39 @@ function AST_m.new(opt)
 				v.args = args
 			elseif v.type == 'MoveVariableAssignment' then
 				trackVarAST(v.Variable).Value = v.Value
+			elseif v.type == 'ForIndexLoop' then
+				local Index = trackVarAST(v.IndexValue).Value or v.IndexValue -- we track the index value
+				local IndexIn = trackVarAST(v.IndexIn).Value or v.IndexIn
+				local IndexOut = trackVarAST(v.IndexOut).Value or v.IndexOut
+				if IndexOut.Value == IndexIn.Value then
+					IndexOut = nil
+				end
+				v.IndexIn = IndexIn
+				v.IndexValue = Index
+				v.IndexOut = IndexOut
+			elseif v.type == 'TableAssignment' then
+				--//
+			--[[elseif v.type == 'TableIndexAssignment' then
+				local tableAST = trackVarAST(v.Table)  -- Store the result once
+				if tableAST and not tableAST['Assignments'] then
+					tableAST['Assignments'] = {}
+				end
+
+				if tableAST then
+					local a = tableAST['Assignments']
+					setmetatable(a, {
+						__newindex = function(t, key, value)
+							rawset(t, key, value)
+						end,
+					})
+
+					-- Safely assign the value
+					a[v.Index] = trackVarAST(v.Value) or v.Value
+					tableAST['Assignments'][v.Index] = trackVarAST(v.Value) or v.Value
+				else
+					-- Handle the case when trackVarAST(v.Table) is nil
+					warn("trackVarAST(v.Table) returned nil for: " .. tostring(v.Table))
+				end--]] -- this breaks the entire ast sooo TODO: Find a solution for this!
 			end
 		end
 		for i, v in pairs(prepped) do
@@ -287,9 +372,9 @@ function AST_m.new(opt)
 				if opt.IgnoreUselessVariables then
 					v.ignore = true
 				end
-				if opt.RenameUselessVariables then
+				--[[if opt.RenameUselessVariables then
 					v.Variable = "_"
-				end
+				end--]]
 			end
 		end
 	end
@@ -308,7 +393,13 @@ function AST_m.new(opt)
 		end
 		local AST_prepare = AST.prepare()
 		for i, v in pairs(AST_prepare) do
-			if v.ignore == true then continue end
+			if v.ignore == true then
+				if opt.RenameUselessVariables then
+					v.Variable = "_"
+				elseif opt.IgnoreUselessVariables then
+					continue
+				end
+			end
 			if v.type == 'VariableAssignment' then
 				if v.isGlobal == false then
 					table_insert(code, c(`local {v.Variable} = {v.Value};`))
@@ -317,15 +408,15 @@ function AST_m.new(opt)
 				end
 			elseif v.type == 'CallAssignment' then
 				if v.ref == false then
-					table_insert(code, `{v.tocall}({table_concat(v.args, ', ')});`)
+					table_insert(code, c(`{v.tocall}({table_concat(v.args, ', ')});`))
 				else
-					table_insert(code, `{v.Variable} = {v.tocall}({table_concat(v.args, ', ')});`)
+					table_insert(code, c(`{v.Variable} = {v.tocall}({table_concat(v.args, ', ')});`))
 				end
 			elseif v.type == 'NamecallAssignment' then
 				if v.ref == false then
-					table_insert(code, `{v.tocall}:{v.k}({table_concat(v.args, ', ')});`)
+					table_insert(code, c(`{v.tocall}:{v.k}({table_concat(v.args, ', ')});`))
 				else
-					table_insert(code, `{v.Variable} = {v.tocall}:{v.k}({table_concat(v.args, ', ')});`)
+					table_insert(code, c(`{v.Variable} = {v.tocall}:{v.k}({table_concat(v.args, ', ')});`))
 				end
 			elseif v.type == 'MoveVariableAssignment' then
 				trackVarAST(v.Variable).Value = v.Value
@@ -337,19 +428,71 @@ function AST_m.new(opt)
 			elseif v.type == 'MoveCallAssignment' then
 				trackVarAST(v.Variable).Value = v.Value
 				if v.ref == false then
-					table_insert(code, `{v.tocall}({table_concat(v.args, ', ')});`)
+					table_insert(code, c(`{v.tocall}({table_concat(v.args, ', ')});`))
 				else
-					table_insert(code, `{v.Variable} = {v.tocall}({table_concat(v.args, ', ')});`)
+					table_insert(code, c(`{v.Variable} = {v.tocall}({table_concat(v.args, ', ')});`))
+				end
+			elseif v.type == 'ForIndexLoop' then
+				local args = {
+					v.IndexIn,
+					v.IndexOut
+				}
+				setmetatable(args, {
+					__newindex = function(tab, key, val)
+						if val == nil then
+							return
+						else
+							rawset(tab, key, val)
+						end
+					end,
+				})
+				table_insert(code, c(`for {v.IndexVariable} = {v.IndexValue}, {table_concat(args, ", ")} do`))
+				indentation += 1
+			elseif v.type == "EndLine" then
+				indentation -= 1
+				table_insert(code, c(`end`))
+			elseif v.type == 'TableAssignment' then
+				if v['Assignments'] then
+					args = v['Assignments']
+				end
+				table_insert(code, c(`local {v.Variable} = ` .. '{\n'))
+				indentation += 1
+				local codeLines = {}
+				for i, v in pairs(args) do
+					table_insert(codeLines, `{i} = {v}`)
+				end
+				if codeLines[1] == nil then
+					table_insert(code, c(`local {v.Variable} = {'{}'};`))
+				else
+					table_insert(code, c(`local {v.Variable} = {'{\n' .. table_concat(codeLines, ",\n")};`))
 				end
 			end
 		end
 		if concat == true or concat == nil then
-			return table.concat(code, '\n')
+			return '-- ' .. tostring(Trademark[math.random(1, #Trademark)]) .. '\n' .. table.concat(code, '\n')
 		else
 			return code
 		end
 	end
 	return AST
 end
+
+
+--[[
+local AST = AST_m.new()
+AST.AddVariableDecleration('v1', 'print', false)
+AST.AddVariableDecleration('u1', '"raw.gith"', false)
+AST.AddNamecallDecleration('v5', 'game', 'HttpGet', {'u1'})
+AST.AddVariableDecleration('v2', '"Hello World!"', false)
+AST.AddCallDecleration('v3', 'v1', {'v2'})
+AST.AddCallDecleration('v18', 'v5', {})
+AST.AddVariableDecleration('v1', 'getgenv', false)
+AST.AddVariableDecleration('v15', 'game', true)
+AST.AddCallDecleration('v3', 'v1', {'v15', 'v2'})
+print(AST)
+AST.optimize()
+print(AST.toLua())
+
+]]
 
 return AST_m
