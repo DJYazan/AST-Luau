@@ -23,5 +23,9 @@ end)()
 
 # Functions
 ```module.new(opt)``` // Creates a new AST with the specified options (parser not included)
+
+
 ```ast.optimize()``` // Optimizes the AST
+
+
 ```ast.tolua()``` // Turn the AST back to Lua Source
